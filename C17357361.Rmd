@@ -1,0 +1,391 @@
+---
+title: "C17357361"
+author: "Max Ammann"
+date: "2023-10-26"
+output:
+  word_document: default
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+# Describing the dataset
+#This data article presents data on the results in national assessments for secondary and university education in engineering students. The data contains academic, social, economic information for 12,411 students. The data were obtained by orderly crossing the databases of the Colombian Institute for the Evaluation of Education (ICFES). The structure of the data allows us to observe the influence of social variables and the evolution of students' learning skills. In addition to serving as input to develop analysis of academic efficiency, student recommendation systems and educational data mining. The data is presented in comma separated value format. Data can be easily accessed through the Mendeley Data Repository (https://data.mendeley.com/datasets/83tcx8psxv/1).
+#The data set contains 12,411 observations where each represents a student and has 44 variables. The variables correspond to the student's personal information (categorical) and the result obtained in the assessments (numerical).The academic assessments are recorded at two time points. The first time point shows scores of the national standardized test at the final year of the high school (Saber 11), evaluating five generic academic competencies including two of interest for our dataset, MAT_S11 and CR_S11. The second time point of academic assessment is at the final year of the professional career on Engineering, recorded on the national standardized test for higher education (SABER PRO) which assess five generic academic compentecies including one of interest for our data set, QR_PRO. MAT_S11 assesses the skills of students to face situations that may be resolved with the use of some math tools in the final year of high school. CR_S11 Assesses the skills needed to understand, interpret and evaluate texts that can be found in everyday life and at academic non-specialized contexts in the final year of high school. QR_PRO assesses the ability to understand and manipulate quantitative data in different representations whether tables, graphs or diagrams on the final year of the professional career of Engineering in Higher education (college.) Categorical variables of interest for thsi dataset include access to mobile phone (MOBILE) and revenue(REVENUE). 
+
+
+
+
+#install necessary packages
+
+install.packages("tidyverse")
+install.packages("pastecs") 
+install.packages("ggplot2")
+install.packages("psych")
+install.packages("semTools")
+install.packages("FSA")
+install.packages("rstatix")
+install.packages("effectsize")
+install.packages("gmodels")
+install.packages("sjstats")
+install.packages("readr")
+install.packages("readxl")
+install.packages("car")
+install.packages("dunn.test")
+
+#load necessary packages
+library("tidyverse") # for importing data
+library("pastecs") #For creating descriptive statistic summaries
+library("ggplot2") #For creating histograms with more detail than plot
+library("psych") #For useful descriptive functions
+library("semTools") #For skewness and kurtosis
+library("FSA")  #For percentage
+library("rstatix") #To calculate post-hoc test
+library("effectsize")  # To calculate effect size
+library("gmodels") #For creating histograms with more detail than plot
+library("sjstats") #chi-square effect size
+library("readr") #to read files
+library("readxl") #to read excel files
+library(car) # to conduct levenes test
+library("dunn.test") # to conduct dunn test
+
+#import data into environment 
+data <-read_csv("DATA_ACADEMIC_PERFORMANCE.csv")
+
+# fortify data
+data <-data_academic_performance
+fortify(data)
+
+
+# Question 1
+Q1 Does a student’s achievement in Mathematics on SABER 11 influence their
+achievement in Quantitative Reasoning on SABER PRO? 
+
+H0: A student's achievement in Maths SABER 11 does not influence their achievement in 
+Quantative Reasoning SABER PRO. 
+
+HA: A student's achievement in Maths SABER 11 does have an influence on their achievement 
+in Quantative Reasoning SABER PRO.
+
+#Assessing Maths SABER 11 normality
+
+#Overview of general statistics of MATHS SABER 11
+pastecs::stat.desc(data$MAT_S11, basic=F)
+
+# get the number of samples
+N <-length(data$MAT_S11)-sum(is.na(data$MAT_S11))
+
+#Histogram of MATHS SABER 11
+gg <- ggplot(data, aes(x=data$MAT_S11)) + labs(caption="Figure 1: Histogram for MATHS SABER 11")
+
+gg <- gg + labs(x="MATHS SCORE HIGH SCHOOL")
+gg <- gg + geom_histogram(binwidth=2, colour="black", aes(y=..density.., fill=..count..))
+gg <- gg + scale_fill_gradient("Count", low="#DCDCDC", high="#7C7C7C")
+     
+# Standardised curve     
+gg <- gg + stat_function(fun=dnorm, color="red",args=list(mean=mean(data$MAT_S11, na.rm=TRUE), sd=sd(data$MAT_S11, na.rm=TRUE)))
+gg
+
+
+#QQ plot for MATHS SABER 11 WITH A STANDARDISED CURVE
+
+qqnorm(data$MAT_S11, main="Figure 2: QQ Plot for MATHS SABER 11") 
+qqline(data$MAT_S11, col=2)
+
+#boxplot to show outliers of MATHS SABER 11
+boxplot(data$MAT_S11 , outline = TRUE , col = "white")
+
+
+# Calculate standardised scores for skew + kurtosis of MATHS SABER 11. we can assess normality based on skew +kurtosis.We divide the skew statistic by the standard error to get the standardised score 
+skewMAT_S11<-semTools::skew(data$MAT_S11)
+kurtosisMAT_S11<-semTools::kurtosis(data$MAT_S11)
+skewMAT_S11[1]/skewMAT_S11[2]
+kurtosisMAT_S11[1]/kurtosisMAT_S11[2]
+
+# We can calculate the percentage of standardised scores for the variable itself that are outside our acceptable range (95% within +/- 1.96 or for larger datasets 99% within +/- 3.29)
+
+# convert our scores into z scores
+zmaths11<- abs(scale(data$MAT_S11))
+
+
+# Calculate the percentage of standardised scores that are greated than 1.96. The perc function which is part of the FSA package which calculate the percentage that are within a range and in this case gt= greater than.
+FSA::perc(as.numeric(zmaths11), 1.96, "gt")
+
+# Calculate the percentage of standardised scores that are greated than 3.29.
+FSA::perc(as.numeric(zmaths11), 3.29, "gt")
+
+
+
+#MATHS SABER 11 scores were assessed for normality. Visual inspection of the histogram and #QQ-Plot (see Figure 1 and Figure 2) identified some issues with skewness and kurtosis.The #standardized score for kurtosis (2.954) was outside the acceptable range and the #standardized score for #skewness (18.17) was outside the acceptable range according to #West, Finch and Curran (1996). However as over 95% of standardized scores fall within the #bounds of +/- 1.96, using the guidance of Field, Miles and Field (2013), the data can be #considered to approximate a normal distribution (m=64.32 , sd=11.87, n = 12411)
+
+
+# General statistics for Quantative Reasoning SABER PRO
+pastecs::stat.desc(data$QR_PRO, basic=F)
+
+# get the number of samples
+N2 <-length(data$QR_PRO)-sum(is.na(data$QR_PRO))
+
+
+#Histogram of Quantative Reasoning SABER PRO     
+gg <- ggplot(data, aes(x=data$QR_PRO)) + labs(caption="Figure 3: Histogram for Quantative Reasoning SABER PRO")
+
+gg <- gg + labs(x="Quantative Reasoning Score in College")
+gg <- gg + geom_histogram(binwidth=2, colour="black", aes(y=..density.., fill=..count..))
+gg <- gg + scale_fill_gradient("Count", low="#DCDCDC", high="#7C7C7C")
+
+#add a normal curve using the stat_function using mean and sd as parameters. use the na.rm parameter to say how missing values are handled 
+
+gg <- gg + stat_function(fun=dnorm, color="red",args=list(mean=mean(data$QR_PRO, na.rm=TRUE), sd=sd(data$QR_PRO, na.rm=TRUE)))
+gg
+
+
+#QQ plot for Quantative Reasoning SABER PRO + Standardised curve
+qqnorm(data$QR_PRO, main="Figure 4: QQ Plot for Quantative Reasoning SABER PRO") 
+qqline(data$QR_PRO, col=2)
+
+
+# Calculate standardised scores for skew + kurtosis of MATHS SABER 11. we can assess normality based on skew +kurtosis.We divide the skew statistic by the standard error to get the standardised score 
+skewQRPRO<-semTools::skew(data$QR_PRO)
+kurtosisQRPRO<-semTools::kurtosis(data$QR_PRO)
+skewQRPRO[1]/skewQRPRO[2]
+kurtosisQRPRO[1]/kurtosisQRPRO[2]
+
+## We can calculate the percentage of standardised scores for the variable itself that are outside our acceptable range (95% within +/- 1.96 or for larger datasets 99% within +/- 3.29)
+
+# convert our scores into z scores
+zQRPRO<- abs(scale(data$QR_PRO))
+
+#Calculate the percentage of standardised scores that are greated than 1.96. The perc function which is part of the FSA package which calculate the percentage that are within a range and in this case gt= greater than.
+FSA::perc(as.numeric(zQRPRO), 1.96, "gt")
+
+#Calculate the percentage of standardised scores that are greated than 3.29.
+FSA::perc(as.numeric(zQRPRO), 3.29, "gt")
+
+#Quantative Reasoning PRO scores were assessed for normality. Visual inspection of the histogram and QQ-Plot (see Figure 3 and Figure 4) identified big issues with skewness and kurtosis.The standardized score for kurtosis (14.355) was outside the acceptable range and the standardized score for #skewness (-53.7) was outside the acceptable range according to #West, Finch and Curran (1996). However as over 99% of standardized scores fall within the #bounds of +/- 3.29, using the guidance of Field, Miles and Field (2013), the data can be #considered to approximate a normal distribution (m=77.417 , sd=22.67, n = 12411)
+
+
+##both parametric variables therefore we can use pearson correlation
+
+# Correlation between MATS_11 and QR_PRO
+scatter1 <- ggplot(data, main = "Figure 5: QR_PRO vs MAT_S11" , aes(data$MAT_S11, data$QR_PRO))
+
+scatter1 + geom_point() + geom_smooth(method = "lm", colour = "Blue", se = F) + labs(x = "MAT_S11", y = "QR_PRO") 
+
+#PEARSON test
+correlationresult<-stats::cor.test(data$MAT_S11, data$QR_PRO, method='pearson')
+correlationresult
+
+
+#The relationship between MATH SABER 11 and Quantative Reasoning PRO shown in Figure 5, was investigated using a Pearson correlation. A strong statistically significant positive correlation was found (r = 0.616, n=12409, p< 0.05).
+ 
+#There is therefore evidence to reject the null hypothesis in favour of the alternate hypothesis that there is a relationship between MATHS SABER 11 and Quantitative Reasoning PRO
+
+
+
+#Q1 OVERVIEW + CONCLUSION
+#Does a student’s achievement in Mathematics on SABER 11 influence their achievement in Quantitative Reasoning on SABER PRO? The null hypothesis is : A student's achievement in Maths SABER 11 does not influence their achievement in Quantative Reasoning SABER PRO. The alternative hypothesis is : A student's achievement in Maths SABER 11 does have an influence on their achievement in Quantative Reasoning SABER PRO. The high school scores for maths (MAT_S11) were assessed for normality. I did an overview of general stats (mean =64.3  median= 64 , sd = 11.874). I then made a histogram to see the spread of the data and added a standardised curve. I though the data looked normal enough by eye with a few high outliers. I then did QQ plots to see percentiles and saw a lot of high outliers. I then made a boxplot to show the outliers and there was a lot in the upper quantiles. I calculated the skew and kurtosis of MAT_S11 by getting the skew/kurtosis and dividing it by the standard error. This normality assessment was rejected as the standardised skew and kurtosis scores were above the -+ 2 threshold (18.2 and 2.95 respectively). Further normality test lead me to calculate z scores to see if the data falls within the 95% and 99%. The z score was calculated for MAT_S11 at 4.45 which meant that 95% of the data falls within the acceptable range to be normal. Therefore MAT_S11 can be treated as parametric. The same tests were done for QR_PRO (mean =77.417, median = 85, sd=22.6 ). The histograms and qq plots showed a highly negative skew which didn’t look normal (skew=-53, kurtosis= 14.4). z scores were calculated and normality was confirmed as 99% of the data fell within the acceptable range (0.177). Therefore QR_PRO can be treated as parametric. As both varaibles are parametric I then did pearson correlation and pearson t test. A strong positive correlation was found (0.61) and a significant t test result was found p value >0.05. Therefore we rejected the null hypothesis in favour of the alternate hypothesis. This makes logical sense as a person’s Maths grade in high school would definitely be related to a person’s quantative reasoning in college.
+
+#Question 2
+Q2 Does a student’s achievement in Critical Reading on SABER 11 influence their achievement in Quantitative Reasoning on SABER PRO? 
+
+H0 : A student’s achievement in Critical reading 11 does not influence their achievement in Quantitative reasoning SABER PRO.
+HA :Alternative = A student's achievement in Critical Reasoning does have an influence on their achievement in Quantitative Reasoning SABER PRO
+
+
+# General statistics for Critical Reading SABER 11
+
+pastecs::stat.desc(data$CR_S11, basic=F)
+
+#number of samples
+length(data$CR_S11)-sum(is.na(data$CR_S11))
+
+#Histogram of Critical Reading SABER 11
+gg <- ggplot(data, aes(x=data$CR_S11)) + labs(caption="Figure 6: Histogram for Critical Reading SABER 11")
+
+gg <- gg + labs(x="Critical Reading score in High School")
+gg <- gg + geom_histogram(binwidth=2, colour="black", aes(y=..density.., fill=..count..))
+gg <- gg + scale_fill_gradient("Count", low="#DCDCDC", high="#7C7C7C")
+
+#add a normal curve using the stat_function using mean and sd as parameters. use the na.rm parameter to say how missing values are handled 
+gg <- gg + stat_function(fun=dnorm, color="red",args=list(mean=mean(data$CR_S11, na.rm=TRUE), sd=sd(data$MAT_S11, na.rm=TRUE)))
+gg
+
+
+#QQ plot for Critical Reading SABER 11 + standardised curve
+qqnorm(data$CR_S11, main="Figure 7: QQ Plot for Critical Reading SABER 11") 
+qqline(data$CR_S11, col=2)
+
+
+# Calculate standardised scores for skew + kurtosis of MATHS SABER 11. we can assess normality based on skew +kurtosis.We divide the skew statistic by the standard error to get the standardised score 
+skewCRS11<-semTools::skew(data$CR_S11)
+kurtosisCRS11<-semTools::kurtosis(data$CR_S11)
+skewCRS11[1]/skewCRS11[2]
+kurtosisCRS11[1]/kurtosisCRS11[2]
+
+#We can calculate the percentage of standardised scores for the variable itself that are outside our acceptable range (95% within +/- 1.96 or for larger datasets 99% within +/- 3.29)
+
+# convert our scores into z scores
+zCRS11<- abs(scale(data$CR_S11))
+
+# Calculate the percentage of standardised scores that are greated than 1.96. The perc function which is part of the FSA package which calculate the percentage that are within a range and in this case gt= greater than
+FSA::perc(as.numeric(zCRS11), 1.96, "gt")
+
+# Calculate the percentage of standardised scores that are greated than 3.29.
+FSA::perc(as.numeric(zCRS11), 3.29, "gt")
+
+#Critical Reading SABER 11 scores were assessed for normality. Visual inspection of the histogram and QQ-Plot (see Figure 3 and Figure 4) didnt identify many issues with skewness and kurtosis. The standardized score for kurtosis (9.74) was outside the acceptable range and the standardized score for #skewness (10.9) was outside the acceptable range according to West, Finch and Curran (1996). However as over 99% of standardized scores fall within the bounds of +/- 3.29, using the guidance of Field, Miles and Field (2013), the data can be considered to approximate a normal distribution (m=60.778 , sd=10.026, n = 12411)
+
+#both normal distributions so can use parametric test (pearson)
+# Correlation between MATS_11 and QR_PRO
+scatter3 <- ggplot(data, main = "Figure 8: CR_S11 vs QR_PRO" , aes(data$CR_S11, data$QR_PRO))
+
+scatter3 + geom_point() + geom_smooth(method = "lm", colour = "Red", se = F) + labs(x = "CR_S11", y = "QR_PRO") 
+
+#PEARSON test
+correlationresult<-stats::cor.test(data$CR_S11, data$QR_PRO, method='pearson')
+correlationresult
+
+
+#The relationship between Critical Reading SABER 11 and Quantative Reasoning PRO shown in Figure 7, was investigated using a Pearson correlation. A strong statistically significant positive correlation was found (r =0.521 , n= 12409, p< 0.05).
+ 
+#There is therefore evidence to reject the null hypothesis in favour of the alternate hypothesis that there is a relationship between Cirtical Reading SABER 11 and Quantative Reasoning PRO.
+
+
+
+#Q2 OVERVIEW AND CONCLUSION
+#Does a student’s achievement in Critical Reading on SABER 11 influence their achievement in Quantitative Reasoning on SABER PRO? The null hypothesis : A student’s achievement in Critical reading 11 does not influence their achievement in Quantitative reasoning SABER PRO. The alternate hypothesis: A student's achievement in Critical Reasoning does have an influence on their achievement in Quantitative Reasoning SABER PRO. We know from the last question that QR_PRO is parametric so we need to see if CR_S11 is normal. We did the same normality tests from question 1 for QR_PRO and found it’s mean =60.77 ,median =61 , sd= 10.026 ,skew =9.74 , kurtosis = 10.9. from histogram it appeared normal but qq plot showed outliers near the higher quantiles. However it was confirmed as parametric as its zscore was 0.379 and 99% of the data fell within  the acceptable range. As both varaibles are parametric I then did pearson correlation and pearson t test. A strong positive correlation was found (0.521) and a significant t test result was found p value >0.05. Therefore we rejected the null hypothesis in favour of the alternate hypothesis. This makes sense as a persons critical reading skills in high school could be an indicator of a higher IQ and people with higher IQs would have better quantative reasoning skills in college.
+
+#Question 3
+Q3 Does a student’s achievement in Mathematics on SABER 11 vary depending on access to a mobile phone? 
+
+
+H0: There is no significant variation in a student’s achievement in Maths SABER11 based on access to a mobile phone.
+HA: There is significant variation in a student’s achievement in Maths SABER11 based on access to a mobile phone.
+
+
+#Conduct Levene's test for homogeneity of variance. The null hypothesis is that variances in groups are equal so to assume homogeneity. The alternative hypothesis is variances in group are not equal. 
+
+leveneTest(data$MAT_S11 ~ data$MOBILE,
+data)
+
+
+#Pr(>F) is your probability and it is statistically significant in this case therefore variances are not equal. 
+
+#We use var.equal = FALSE as variances are not equal
+#T test
+
+stats::t.test(data$MAT_S11~data$MOBILE, var.equal=FALSE, data)
+
+# then we calculate cohens D which is 
+cohens_D = 2*-18.274/sqrt(6858.3)
+print(cohens_D)
+
+
+#An independent-samples t-test was conducted to compare Math Scores in high school with access to mobile phone. A significant difference in the High school maths scores was found for students who had access to a mobile phone (M=65.5) compared to those students math scores who didnt have access to a mobile phones (M=61.3). Cohen's d also indicated a small to moderate effect size (-0.441).
+
+#There is therefore evidence to reject the null hypothesis in favour of the alternate hypothesis that there is a difference in High School Maths scores with access to mobile phone and without access to mobile phone as a statistically significant result was found from the t test. p>0.05
+
+
+#Q3 OVERVIEW AND CONCLUSION
+#Does a student’s achievement in Mathematics on SABER 11 vary depending on access to a mobile phone? The null hypothesis is : There is no significant variation in a student’s achievement in Maths SABER11 based on access to a mobile phone. The alternate hypothesis is : There is significant variation in a student’s achievement in High school maths scores based on access to a mobile phone. I conducted a Levenes test of homogeneity of variance were the null hypothesis was that the groups were equal variance so to assume homogeneity. The alternative hypothesis is that the variances in the groups are not equal. I got a statistically significant result from this test p>0.05 and therefore we reject the null hypothesis in favour of the alternative hypothesis and therefore the variances of the groups were not equal. I then did an independent t test with var.equal = FALSE as the variances were not equal. I also calculated Cohens D score to see the effect size of this result. This was statistically significant (p>0.05) so we rejected the null hypothesis in favour of the alternative. Cohens d also indicated a small to moderate effect size at -0.441. This makes logical sense to a degree as access to a mobile phone can be an indicator of more wealth which in turn can indicate the level of schooling which in turn can indicate an increased high school maths score as their schooling is better.
+
+#Question 4
+
+q4 Does a student’s achievement in Mathematics on SABER 11 vary by revenue? 
+
+
+H0 : There is no significant variation in a student’s achievement in Maths SABER11 based on revenue
+HA : There is significant variation in a student’s achievement in Maths SABER11 based on revenue
+
+# general descriptive statistics of MAT_S11 based on Revenue
+psych::describeBy(data$MAT_S11, data$REVENUE, mat=TRUE)
+optdesc<-psych::describeBy(data$MAT_S11,data$REVENUE,mat=TRUE)
+
+# Bartlett test for homogeneity of variance
+stats::bartlett.test(data$MAT_S11~ data$REVENUE, data=data)
+
+# p value less than 0.05 therefore unequal variances and treat it as non-parametric and 
+# use kruskal-wallis test
+
+stats::kruskal.test(data$MAT_S11~data$REVENUE,data=data)
+
+# Significant p vale therefore post-hoc tests (dunntest)
+dunntest<-FSA::dunnTest(x=as.numeric(data$MAT_S11), g=factor(data$REVENUE), method="bonferroni")
+
+# printing the dunn test results
+print(dunntest, dunn.test.results = TRUE)
+
+# detailed dunn test results
+dunntest2<-rstatix::dunn_test(data, MAT_S11~REVENUE, p.adjust.method = "bonferroni", detailed = FALSE)
+dunntest2
+
+# calculate efect size (small effect size 0.108)
+rstatix::kruskal_effsize(data, MAT_S11~REVENUE, ci = FALSE, conf.level = 0.95,
+  ci.type = "perc", nboot = 1000)
+
+
+# Create tables to show median and IQR range of MAT_S11 AND REVENUE
+n <- tapply(as.numeric(data$MAT_S11), 
+            INDEX= data$REVENUE, 
+            FUN = length)
+
+mdns <- tapply(as.numeric(data$MAT_S11), 
+            INDEX= data$REVENUE, 
+            FUN = median, na.rm=TRUE)
+
+iqrs <- tapply(as.numeric(data$MAT_S11), 
+            INDEX= data$REVENUE, 
+            FUN = IQR, type = 5, na.rm=TRUE)
+            
+            
+REVENUE_MAT_S11 <- data.frame(REVENUE = names(n), 
+                               n = n,
+                               median = mdns, 
+                               IQR = iqrs)
+                               
+REVENUE_MAT_S11
+
+
+#A Kruskal-Wallis test was conducted differences in MATH grades achieved by pupils in High school depending on Revenue. Statistically significant differences were found (H = 1348, p > 0.05). Post-hoc testing using Dunns test identified significant differences between the grades achieved by 21 of the groups (minused the 0 groups)
+
+#The effect size, calculated using eta squared was small at 0.108. The median and IQR values for the Math grades depending on revenue are also shown. 
+
+#Therefore while evidence was found in favour of rejecting the null hypothesis in favour of the alternate hypothesis, the effect found was small.
+
+
+#Q4 OVERVIEW AND CONCLUSION
+#Does a student’s achievement in Mathematics on SABER 11 vary by revenue? The null hypotheis :  There is no significant variation in a student’s achievement in Maths SABER11 based on revenue. The alternate hypotheis : There is significant variation in a student’s achievement in Maths SABER11 based on revenue. I did a general descriptive statistics of high school math score based on revenue. I then tested for homogeneity of variance using a Bartlett test. This test came back with a statistically significant result and therefore the variances were not equal and therefore I can treat this data as non-parametric. I used a Kruskal-wallis test as data was non-parametric and got a statistically significant result. This result suggests that there are statistically significant differences between the groups and further analysis is required. I used a Dunn’s test as a post-hoc test to identify which groups were siginificantly different from each other and found that 21 groups were significantly different to each other the highest group being the high school scores of people who had revenue of 10 or more times the minimum wage vs the high school scores of people who had between 1-2 times the minimum wage with a p value of 2.60x10^-260 which makes logical sense as people with more money can get access to better education and therefore have higher high school math grades.
+#Question 5
+q5 Is access to a mobile related to revenue? 
+
+H0 : There is no significant relationship between access to a mobile and revenue
+
+HA : There is a significant relationship between access to a mobile and revenue
+
+#creating a chi square using contingency table
+gmodels::CrossTable(data$MOBILE, data$REVENUE, fisher = TRUE, chisq = TRUE, expected = TRUE, sresid = TRUE, format = "SPSS")
+
+# simpler way to create chi square
+#create contingency table
+mytable<-xtabs(~data$MOBILE+ data$REVENUE, data=data)
+
+#chi square test with correct=TRUE to get YATES correction needed for 2x2 table
+ctest<-stats::chisq.test(mytable, correct=TRUE)
+#will give you the details of the test+ p-value
+ctest
+#expected frequencies
+ctest$expected
+#observed frequencies
+ctest$observed
+# pvalue
+ctest$p.value
+#Calculate effect size
+sjstats::phi(mytable)
+sjstats::cramer(mytable)
+
+
+# A Chi-Square test for independence (with Yates’ Continuity Correction) indicated a significant association between access to mobile phone and revenue, (χ2 = 1947,p>0.05, phi=0.396). There is therefore evidence to reject the null hypothesis in favour of the alternate hypothesis.
+
+
+
+#Q5 OVERVIEW AND CONCLUSION
+#Is access to a mobile related to revenue? The null hypothesis: There is no significant relationship between access to a mobile and revenue. The alternative hypothesis: There is a significant relationship between access to a mobile and revenue. I created a contingency table using the variables access to mobile phone (MOBILE) and revenue (REVENUE). I then performed a chi square test on the contingency table where the correct=TRUE applies Yates’ continuity correction which is used for 2x2tables to account for discrete data. I then got the result of the chi square test (0.396) with a p value>0.05. There is therefore evidence to reject the null hypothesis in favour of the alternate hypothesis. This makes logical sense as people who have more money would be more likely to have a mobile phone as they have the money to buy one. 
